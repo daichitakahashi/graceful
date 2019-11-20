@@ -109,15 +109,13 @@ func (ln *gracefulListener) StopAccept() (restart func(), err error) {
 type conn struct {
 	net.Conn
 	parent *gracefulListener
+	once   sync.Once
 }
 
 func (c *conn) Close() error {
 	err := c.Conn.Close()
-	if err != nil {
-		if err != syscall.EINTR {
-			return err
-		}
+	if err != syscall.EINTR {
+		c.once.Do(c.parent.closeConn)
 	}
-	c.parent.closeConn()
-	return c.Conn.Close()
+	return err
 }
